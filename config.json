@@ -1,0 +1,24 @@
+{
+    "solverProvider": "rosolve",
+    "publicKey": "476068BF-9607-4799-B53D-966BE98E2B81",
+    "Solvers_Keys": {
+        "RoSolve": {
+            "RoSolve": "dff7cea5bc721cc1af44e6ebedb21271aabd4dc1ef354222a595217ff230a398",
+            "HTTP3": true
+        },
+        "Devious": {
+            "Devious": "9c7e1b4a0d3f"
+        },
+        "FunBypass": {
+            "FunBypass": "FUN-29ET102E3FJXN6U9"
+        }
+    },
+    "threads": 400,
+    "logWebhook": true,
+    "webhook": "https://discordapp.com/api/webhooks/1451705384913076383/XGRKypQ5JNcg5WvOkAeKc1iXqXEiToLlWqmXxRO92wHDG7iqSObNJshonyHzkPf-JYJ2",
+    "passwordChanger": {
+        "enabled": true,
+        "prefix": "",
+        "randomLength": 12
+    }
+}
