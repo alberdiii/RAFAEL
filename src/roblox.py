@@ -15,6 +15,8 @@ from util import Util
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 config = Util.get_config()
+MAX_RETRIES = 10
+RETRY_COUNTS = {}
 
 WEBHOOK_ENABLED = config["logWebhook"]
 LOCKED_WEBHOOK = config.get("lockedWebhook")
@@ -47,6 +49,7 @@ WEBHOOK = config["webhook"]
 class Roblox:
     def __init__(self, lock: ThreadLock, counter: Counter, accounts) -> None:
         self.account = None
+        self.account_key = None
         self.attempts = 0
         self.checked = False
         self.lock = lock
@@ -142,15 +145,18 @@ class Roblox:
 
                     with self.lock.get_lock():
                         self.account = self.accounts[self.counter.get_value()].strip("\n").split(":")
+                        self.account_key = f"{self.account[0]}:{self.account[1]}"
+                        self.attempts = RETRY_COUNTS.get(self.account_key, 0)
                         self.counter.increment()
-                else:
-                    if self.attempts == 10:
-                        Output("ERROR").log(f"Max retries reached | {self.account[0]}")
-                        self.checked = True
-                        self.attempts = 0
 
-                        continue
-                
+                if self.attempts >= MAX_RETRIES:
+                    Output("ERROR").log(f"Max retries reached | {self.account[0]}")
+                    self.checked = True
+                    self.attempts = 0
+                    with self.lock.get_lock():
+                        RETRY_COUNTS.pop(self.account_key, None)
+                    continue
+
                 Output("INFO").log(f"Checking account | {self.account[0]}")
 
                 self.session, self.sec_ch_ua, self.user_agent, self.proxy = Session().session()
@@ -240,6 +246,8 @@ class Roblox:
                     self.handle_multi(response.json())
 
                     self.checked = True
+                    with self.lock.get_lock():
+                        RETRY_COUNTS.pop(self.account_key, None)
                     continue
 
                 if "Verification" in response.text:
@@ -260,6 +268,8 @@ class Roblox:
                     self.handle_valid(user_id_and_cookie, cookie_header)
                     
                     self.checked = True
+                    with self.lock.get_lock():
+                        RETRY_COUNTS.pop(self.account_key, None)
                     continue
                 
                 elif "Challenge" in response.text:
@@ -469,6 +479,8 @@ class Roblox:
                     self.handle_multi(user_id_and_cookie)
 
                     self.checked = True
+                    with self.lock.get_lock():
+                        RETRY_COUNTS.pop(self.account_key, None)
                     continue
 
                 
@@ -478,10 +490,14 @@ class Roblox:
                 self.handle_valid(user_id_and_cookie, cookie_header)
 
                 self.checked = True
+                with self.lock.get_lock():
+                    RETRY_COUNTS.pop(self.account_key, None)
 
             except Exception as e:
                 if str(e) == "invalid":
                     self.checked = True
+                    with self.lock.get_lock():
+                        RETRY_COUNTS.pop(self.account_key, None)
 
                     Output("ERROR").log(f"Invalid account | {self.account[0]}")
 
@@ -490,6 +506,8 @@ class Roblox:
                             file.write(f'{self.account[0]}:{self.account[1]}\n')
                 elif str(e) == "locked":
                     self.checked = True
+                    with self.lock.get_lock():
+                        RETRY_COUNTS.pop(self.account_key, None)
 
                     Output("LOCKED").log(f"Valid account [locked] | {self.account[0]}")
 
@@ -511,6 +529,9 @@ class Roblox:
                             pass
                 elif str(e) == "2fa":
                     self.checked = True
+
+                    with self.lock.get_lock():
+                        RETRY_COUNTS.pop(self.account_key, None)
 
                     Output("2FA").log(f"Valid account [2fa] | {self.account[0]}")
 
@@ -534,6 +555,16 @@ class Roblox:
                     Output("ERROR").log(str(e))
 
                     self.attempts += 1
+                    self.checked = True
+
+                    with self.lock.get_lock():
+                        if self.attempts >= MAX_RETRIES:
+                            Output("ERROR").log(f"Max retries reached | {self.account[0]}")
+                            RETRY_COUNTS.pop(self.account_key, None)
+                        else:
+                            RETRY_COUNTS[self.account_key] = self.attempts
+                            self.accounts.append(f"{self.account[0]}:{self.account[1]}\n")
+
 
     def handle_valid(self, user_id_and_cookie, cookie_header) -> None:
         with self.lock.get_lock():
