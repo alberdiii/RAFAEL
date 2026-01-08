@@ -14,6 +14,7 @@ class Output:
             "CAPTCHA": (Fore.LIGHTBLUE_EX, "🤖"),
             "ERROR": (Fore.LIGHTRED_EX, "❌"),
             "SUCCESS": (Fore.LIGHTGREEN_EX, "✅"),
+            "MAIL_VALID": (Fore.LIGHTGREEN_EX, "📧"),
             "LOCKED": (Fore.YELLOW, "🔒"),
             "2FA": (Fore.YELLOW, "🔢"),
             "STATUS": (Fore.YELLOW, "⚠️"),

