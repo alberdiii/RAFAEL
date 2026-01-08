@@ -5,5 +5,8 @@
 
     "webhook": "https://discordapp.com/api/webhooks/1451705384913076383/XGRKypQ5JNcg5WvOkAeKc1iXqXEiToLlWqmXxRO92wHDG7iqSObNJshonyHzkPf-JYJ2",
     "lockedWebhook": "https://discordapp.com/api/webhooks/1453086018654703616/7-M8rJryHc7ht6ILtdsGkdk403VTuQMsOizSaCd66N8_JQHqycSaJfqQBeoCYQHXdp1v",
-    "twofaWebhook": "https://discordapp.com/api/webhooks/1458608149098528851/9ExBoLpmqSSw2Cc19VPQkeYTiTSFmeTmIaCdeMVDOUWg5xeJngbi8N3mNADhaKz5ip8i"
+    "twofaWebhook": "https://discordapp.com/api/webhooks/1458608149098528851/9ExBoLpmqSSw2Cc19VPQkeYTiTSFmeTmIaCdeMVDOUWg5xeJngbi8N3mNADhaKz5ip8i",
+    "termedWebhook": "https://discordapp.com/api/webhooks/1458880399978664100/EaY3Zn3oqnDdUqVBOGafkqD8zNWgya-kyp0WC16dnC-EPA2tPUJvSarj0u25HoIdquIS",
+    "tempBannedWebhook": "https://discordapp.com/api/webhooks/1458880295846674461/rp-qWkZu2DBkwPtW70mOrVIHSoMsPDozLuKr7rH64iFNu7u6F7zVNzXPH-Oa6YrKCPTw",
+    "reactivatedWebhook": "https://discordapp.com/api/webhooks/1458880158546137211/an5_dd6omK10MuWOxW8uBtTHvub3BRF-kHMZWovY0z0ZmRBdSKZxQfwLcHAujPYAOHiY"
 }

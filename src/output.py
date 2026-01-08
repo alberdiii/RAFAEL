@@ -16,6 +16,7 @@ class Output:
             "SUCCESS": (Fore.LIGHTGREEN_EX, "✅"),
             "LOCKED": (Fore.YELLOW, "🔒"),
             "2FA": (Fore.YELLOW, "🔢"),
+            "STATUS": (Fore.YELLOW, "⚠️"),
             "FAVOURITE": (Fore.YELLOW, "🌟"),
             "MAIL": (Fore.RESET, "📩"),
             "HUMANIZE": (Fore.YELLOW, "👦"),
